@@ -1,0 +1,77 @@
+version: '3'
+
+services:
+    #Php(Laravel) Service
+    app:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: app
+      restart: unless-stopped
+      tty: true
+      environment:
+        SERVICE_NAME: app
+        SERVICE_TAGS: dev
+      working_dir: /var/www/html/
+      volumes:
+        - ./:/var/www/html/
+        - ./php/laravel.ini:/usr/local/etc/php/conf.d/laravel.ini
+      networks:
+        - app-network      
+
+    #NgInx Service
+    webserver:
+      image: nginx:stable-alpine
+      container_name: webserver
+      restart: unless-stopped
+      tty: true
+      ports:
+        - "8080:80"
+      volumes:
+        - ./:/var/www/html/
+        -  ./nginx/conf.d/:/etc/nginx/conf.d/
+      networks:
+        - app-network  
+
+    #MySQL Service
+    database:
+      image: mysql:8.0
+      container_name: database
+      restart: unless-stopped
+      tty: true
+      ports:
+        - "3306:3306"
+      environment:
+        MYSQL_DATABASE: laradock_db
+        MYSQL_USERNAME: admin
+        MYSQL_PASSWORD: admin
+        MYSQL_ROOT_PASSWORD: admin
+      volumes:
+        - dbdata:/var/lib/mysql/
+        - ./mysql/my.conf:/etc/mysql/my.conf
+      networks:
+        - app-network      
+    
+    #PhpMyAdmin Service  
+    phpmyadmin:
+      image: phpmyadmin/phpmyadmin
+      restart: always
+      container_name: phpmyadmin
+      depends_on: 
+        - database
+      ports:
+        - "8081:80"
+      environment:
+        PMA_HOST: database
+        MYSQL_ROOT_PASSWORD: admin
+      networks:
+        - app-network      
+      
+networks:
+  app-network:
+    driver: bridge
+    
+volumes:
+  dbdata:
+    driver: local    
+
